@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  {{- include "apps.metadata" (dict "name" "cert-manager" "wave" 0) | nindent 2 }}
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: {{ .Values.charts.certManager }}
+    helm:
+      valuesObject:
+        crds:
+          enabled: true
+        # Deleting an app deletes its Ingress and Certificates; this makes the TLS
+        # secrets go with them instead of piling up in the tenant namespace.
+        enableCertificateOwnerRef: true
+  {{- include "apps.destinationAndSync" (dict "namespace" "cert-manager") | nindent 2 }}

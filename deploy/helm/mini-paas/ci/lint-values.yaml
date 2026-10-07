@@ -1,0 +1,8 @@
+# Values that have no sensible default, filled in so the chart can be linted and rendered.
+builds:
+  roleArn: arn:aws:iam::123456789012:role/mini-paas-builder
+externalSecrets:
+  databaseSecret: rds!db-00000000-0000-0000-0000-000000000000
+metrics:
+  serviceMonitor:
+    enabled: true

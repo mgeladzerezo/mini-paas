@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  {{- include "apps.metadata" (dict "name" "external-dns" "wave" 0) | nindent 2 }}
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/external-dns/
+    chart: external-dns
+    targetRevision: {{ .Values.charts.externalDns }}
+    helm:
+      valuesObject:
+        provider:
+          name: aws
+        env:
+          - name: AWS_DEFAULT_REGION
+            value: {{ .Values.region }}
+        sources: [ingress]
+        # Only names inside the platform zone are managed. A verified custom domain
+        # is in the customer's own zone, so its Ingress host is skipped here.
+        domainFilters: [{{ .Values.dnsZone | quote }}]
+        policy: sync
+        registry: txt
+        txtOwnerId: mini-paas
+        serviceAccount:
+          name: external-dns
+          annotations:
+            eks.amazonaws.com/role-arn: {{ .Values.roleArns.externalDns | quote }}
+  {{- include "apps.destinationAndSync" (dict "namespace" "external-dns") | nindent 2 }}

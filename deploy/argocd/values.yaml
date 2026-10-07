@@ -1,0 +1,30 @@
+# Environment-specific values. scripts/bootstrap.* fills these from Terraform outputs
+# as Helm parameters on the root Application, so nothing account-specific is committed.
+repoURL: https://github.com/your-org/mini-paas.git
+targetRevision: main
+
+region: eu-central-1
+dnsZone: paas.example.com
+host: paas.example.com
+baseDomain: apps.paas.example.com
+acmeEmail: ops@example.com
+
+imageRegistry: 123456789012.dkr.ecr.eu-central-1.amazonaws.com
+imageTag: latest
+appsRepository: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/mini-paas/apps
+
+dbHost: ""
+dbSecretName: ""
+
+roleArns:
+  builder: ""
+  externalDns: ""
+  externalSecrets: ""
+
+# Upstream chart versions, pinned so a rebuild installs what was tested.
+charts:
+  ingressNginx: 4.15.1
+  certManager: v1.21.2
+  externalDns: 1.23.0
+  externalSecrets: 2.11.0
+  metricsServer: 3.14.0

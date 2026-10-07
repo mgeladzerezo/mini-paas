@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  {{- include "apps.metadata" (dict "name" "mini-paas" "wave" 1) | nindent 2 }}
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: deploy/helm/mini-paas
+    helm:
+      releaseName: mini-paas
+      valuesObject:
+        host: {{ .Values.host }}
+        baseDomain: {{ .Values.baseDomain }}
+        ingressTarget: {{ .Values.host }}
+        image:
+          registry: {{ .Values.imageRegistry }}
+          tag: {{ .Values.imageTag | quote }}
+        certManager:
+          acmeEmail: {{ .Values.acmeEmail }}
+        builds:
+          roleArn: {{ .Values.roleArns.builder | quote }}
+          repository: {{ .Values.appsRepository }}
+        database:
+          host: {{ .Values.dbHost | quote }}
+        externalSecrets:
+          region: {{ .Values.region }}
+          databaseSecret: {{ .Values.dbSecretName | quote }}
+  {{- include "apps.destinationAndSync" (dict "namespace" "mini-paas") | nindent 2 }}
+    # CRDs from wave 0 can take a moment to be served.
+    retry:
+      limit: 10
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+data:
+  PAAS_ADAPTERS: real
+  PAAS_BASE_DOMAIN: {{ .Values.baseDomain | quote }}
+  PAAS_INGRESS_TARGET: {{ .Values.ingressTarget | quote }}
+  PAAS_INGRESS_CLASS: {{ .Values.ingress.className | quote }}
+  PAAS_INGRESS_NAMESPACE: {{ .Values.ingress.controllerNamespace | quote }}
+  PAAS_CLUSTER_ISSUER: {{ .Values.certManager.clusterIssuer | quote }}
+  PAAS_BUILDS_NAMESPACE: {{ .Values.builds.namespace | quote }}
+  PAAS_BUILDER_SERVICE_ACCOUNT: {{ .Values.builds.serviceAccount | quote }}
+  PAAS_BUILD_TIMEOUT_SECONDS: {{ .Values.builds.timeoutSeconds | quote }}
+  PAAS_REGISTRY_REPOSITORY: {{ .Values.builds.repository | quote }}
+  PAAS_GITHUB_APP_SLUG: {{ .Values.github.appSlug | quote }}
+  PAAS_WORKER_INTERVAL_SECONDS: {{ .Values.worker.intervalSeconds | quote }}

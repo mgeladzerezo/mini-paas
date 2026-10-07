@@ -1,0 +1,115 @@
+{{- $ns := .Values.builds.namespace -}}
+# Everything build jobs need, and the limits placed on them. Builds run tenant-supplied
+# Dockerfiles, so this namespace is treated as hostile.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $ns }}
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+    # Kaniko must run as root inside its container, which "restricted" forbids.
+    # "baseline" still blocks privileged pods, host namespaces and hostPath volumes.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.builds.serviceAccount }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.builds.roleArn | quote }}
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: builds
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+spec:
+  hard:
+    {{- toYaml .Values.builds.quota | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Builds reach GitHub, base-image registries, ECR and STS over the internet, and
+# nothing inside the VPC: not other pods, not the database, and not the instance
+# metadata service that would hand out the node's IAM credentials.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internet-and-dns
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - { protocol: TCP, port: 443 }
+---
+# The platform creates Jobs and their token Secrets here and reads pod status and logs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-builds
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, create, patch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-builds
+  namespace: {{ $ns }}
+  labels:
+    {{- include "mini-paas.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-builds
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}
+    namespace: {{ .Release.Namespace }}

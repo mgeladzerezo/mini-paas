@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mini-paas
+description: The platform's own components - API, release worker, web UI and the build namespace
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

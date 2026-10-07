@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  {{- include "apps.metadata" (dict "name" "metrics-server" "wave" 0) | nindent 2 }}
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/metrics-server/
+    chart: metrics-server
+    targetRevision: {{ .Values.charts.metricsServer }}
+    helm:
+      valuesObject:
+        # The per-app HorizontalPodAutoscalers read CPU utilisation from here.
+        replicas: 2
+  {{- include "apps.destinationAndSync" (dict "namespace" "kube-system") | nindent 2 }}

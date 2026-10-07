@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  {{- include "apps.metadata" (dict "name" "ingress-nginx" "wave" 0) | nindent 2 }}
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    chart: ingress-nginx
+    targetRevision: {{ .Values.charts.ingressNginx }}
+    helm:
+      valuesObject:
+        controller:
+          replicaCount: 2
+          # Tenant Ingresses are rendered by the platform, never written by tenants, but
+          # snippets stay off regardless: they allow arbitrary nginx config per Ingress.
+          allowSnippetAnnotations: false
+          service:
+            annotations:
+              service.beta.kubernetes.io/aws-load-balancer-type: nlb
+              service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+          metrics:
+            enabled: true
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+  {{- include "apps.destinationAndSync" (dict "namespace" "ingress-nginx") | nindent 2 }}

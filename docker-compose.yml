@@ -1,0 +1,43 @@
+# Local development stack. PAAS_ADAPTERS=fake replaces Kubernetes, the image builder,
+# GitHub and DNS with in-memory implementations, so the whole deploy flow can be
+# clicked through without a cluster. State of the fake cluster is lost on restart.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: paas
+      POSTGRES_PASSWORD: paas
+      POSTGRES_DB: paas
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paas -d paas"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    command: sh -c "alembic upgrade head && uvicorn app.asgi:app --host 0.0.0.0 --port 8000"
+    environment:
+      PAAS_DATABASE_URL: postgresql+psycopg://paas:paas@db:5432/paas
+      PAAS_ADAPTERS: fake
+      # The fake cluster lives in this process's memory, so the worker must too.
+      PAAS_RUN_WORKER: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8109:8000"
+
+  frontend:
+    build: ./frontend
+    environment:
+      API_UPSTREAM: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "5179:8080"
+
+volumes:
+  db-data:

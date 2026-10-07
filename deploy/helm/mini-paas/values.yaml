@@ -1,0 +1,80 @@
+# Hostname of the web UI and API.
+host: paas.example.com
+# Apps are served at <app>.<tenant>.<baseDomain>.
+baseDomain: apps.paas.example.com
+# What customers point custom-domain CNAMEs at. The platform host works because
+# ExternalDNS keeps it pointed at the ingress load balancer.
+ingressTarget: paas.example.com
+
+image:
+  registry: 123456789012.dkr.ecr.eu-central-1.amazonaws.com
+  tag: latest
+  pullPolicy: IfNotPresent
+
+api:
+  replicas: 2
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+
+worker:
+  intervalSeconds: 3
+  resources:
+    requests: { cpu: 50m, memory: 192Mi }
+    limits: { cpu: 500m, memory: 384Mi }
+
+frontend:
+  replicas: 2
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 96Mi }
+
+ingress:
+  className: nginx
+  # Namespace of the ingress controller; tenant NetworkPolicies allow traffic from it.
+  controllerNamespace: ingress-nginx
+
+certManager:
+  # Creates the ClusterIssuer used by the platform and by every tenant app.
+  createClusterIssuer: true
+  clusterIssuer: letsencrypt
+  acmeEmail: ops@example.com
+  acmeServer: https://acme-v02.api.letsencrypt.org/directory
+
+github:
+  appSlug: mini-paas
+
+builds:
+  namespace: paas-builds
+  serviceAccount: builder
+  # IAM role with push access to the apps repository (terraform output irsa_role_arns.builder).
+  roleArn: ""
+  repository: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/mini-paas/apps
+  timeoutSeconds: 900
+  quota:
+    pods: "6"
+    limits.cpu: "16"
+    limits.memory: 32Gi
+
+database:
+  host: mini-paas.example.eu-central-1.rds.amazonaws.com
+  port: 5432
+  name: paas
+
+externalSecrets:
+  # When false, create a Secret named <release>-env yourself with the PAAS_* keys
+  # listed in templates/externalsecret.yaml.
+  enabled: true
+  region: eu-central-1
+  serviceAccount:
+    name: external-secrets
+    namespace: external-secrets
+  platformSecret: mini-paas/platform
+  githubAppSecret: mini-paas/github-app
+  # The secret RDS manages for the master user (terraform output db_secret_name).
+  databaseSecret: ""
+
+metrics:
+  serviceMonitor:
+    enabled: false
+    interval: 30s

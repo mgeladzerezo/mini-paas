@@ -1,0 +1,5 @@
+apiVersion: v2
+name: mini-paas-apps
+description: Argo CD app-of-apps - cluster add-ons and the platform itself
+type: application
+version: 0.1.0

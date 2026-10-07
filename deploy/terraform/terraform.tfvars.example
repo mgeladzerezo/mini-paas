@@ -1,0 +1,4 @@
+region              = "eu-central-1"
+dns_zone_name       = "paas.example.com"
+cluster_admin_cidrs = ["203.0.113.7/32"]
+github_repository   = "your-org/mini-paas"
